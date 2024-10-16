@@ -1,44 +1,46 @@
-// index.js
-
 const fs = require('fs');
-const { program } = require('commander');
+const commander = require('commander');
 
-// Налаштування командного рядка
+const program = new commander.Command();
+
 program
-  .option('-i, --input <path>', 'шлях до файлу для читання (обовʼязковий параметр)')
-  .option('-o, --output <path>', 'шлях до файлу для запису (необовʼязковий параметр)')
-  .option('-d, --display', 'вивести результат у консоль (необовʼязковий параметр)')
-  .parse(process.argv);
+  .requiredOption('-i, --input <path>', 'path to the input JSON file')
+  .option('-o, --output <path>', 'path to the output file')
+  .option('-d, --display', 'display the result in console');
 
-// Отримуємо значення параметрів
+program.parse(process.argv);
+
 const options = program.opts();
 
-// Перевірка наявності обовʼязкового параметра
 if (!options.input) {
   console.error("Please, specify input file");
   process.exit(1);
 }
 
-// Перевірка наявності файлу для читання
-if (!fs.existsSync(options.input)) {
+let data;
+
+try {
+  const jsonString = fs.readFileSync(options.input);
+  data = JSON.parse(jsonString);
+} catch (err) {
   console.error("Cannot find input file");
   process.exit(1);
 }
 
-// Читання JSON файлу
-const jsonData = fs.readFileSync(options.input, 'utf8');
-const data = JSON.parse(jsonData);
+if (data && Array.isArray(data)) {
+  const minAsset = data.reduce((prev, curr) => {
+    return (prev.value < curr.value) ? prev : curr;
+  });
 
-// Якщо задані необовʼязкові параметри
-if (options.display) {
-  console.log(data);
-}
+  const result = `${minAsset.txt}: ${minAsset.value}`;
 
-if (options.output) {
-  fs.writeFileSync(options.output, JSON.stringify(data, null, 2));
-  
-  // Виводимо результат і у файл, і у консоль
   if (options.display) {
-    console.log(data);
+    console.log(result);
   }
+
+  if (options.output) {
+    fs.writeFileSync(options.output, result);
+  }
+} else {
+  console.error("No valid data found in input file");
 }
